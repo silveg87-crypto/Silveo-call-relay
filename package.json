@@ -1,0 +1,15 @@
+{
+  "name": "silveo-call-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone ElevenLabs post-call webhook receiver that relays a short call summary to Silveo by SMS (Twilio) and email. Not part of PlugSpeak.",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
