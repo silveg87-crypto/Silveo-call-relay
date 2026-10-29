@@ -101,7 +101,7 @@ volume) or Fly.io (app + volume). Silveo chooses the host.
 
 - Root directory: repository root
 - Start command: `npm start` (runs `node src/server.js`)
-- Health check: `GET /healthz` → `{"ok":true,"sms":"configured","email":"pending"}`
+- Health check: `GET /healthz` → `{"ok":true,"problems":[],"sms":"configured","email":"pending"}`
 - Webhook URL: `https://<your-host>/webhooks/elevenlabs/post-call`
 
 Run the tests anywhere with `npm test`.
@@ -124,9 +124,11 @@ See `.env.example`. Never put values in code, chat, screenshots or the repo.
 | `PORT` | no | Default `8080` (most hosts set it). |
 | `STATE_FILE` | no | Default `./data/state.json`; point it at the persistent volume. |
 
-The server refuses to start if the ElevenLabs values are missing or a phone
-number is malformed. It starts without SMS/email credentials so the webhook can
-be wired up first, but `/healthz` and the startup log show what is missing.
+If the ElevenLabs values are missing or a phone number is malformed, the
+server still starts (so the host can assign its URL before the ElevenLabs
+webhook exists) but answers every webhook with `503` and sends nothing;
+`/healthz` shows `"ok": false` and lists the problems by variable name. It
+also runs without SMS/email credentials; `/healthz` shows what is pending.
 
 ### Email sender (needs Silveo's approval)
 

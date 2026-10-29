@@ -37,14 +37,21 @@ export function createApp({ config, store, fetchImpl = fetch }) {
     const path = new URL(req.url, "http://local").pathname;
 
     if (req.method === "GET" && path === "/healthz") {
+      // The service itself is up (200) even while setup is incomplete, so the
+      // host keeps it running; "ok" says whether webhooks are being accepted.
       return reply(res, 200, {
-        ok: true,
+        ok: config.problems.length === 0,
+        problems: config.problems,
         sms: config.sms.configured ? "configured" : "not configured",
         email: config.email.configured ? "configured" : "pending",
       });
     }
     if (path !== WEBHOOK_PATH) return reply(res, 404, { error: "not found" });
     if (req.method !== "POST") return reply(res, 405, { error: "method not allowed" });
+    if (config.problems.length) {
+      log("rejected_not_configured");
+      return reply(res, 503, { error: "relay not configured" });
+    }
 
     let raw;
     try {
@@ -80,14 +87,14 @@ export function createApp({ config, store, fetchImpl = fetch }) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const config = loadConfig();
-  if (config.problems.length) {
-    for (const p of config.problems) console.error(`config error: ${p}`);
-    process.exit(1);
-  }
+  // Start anyway so the host gives the service a URL before the ElevenLabs
+  // webhook (and its secret) exist; webhooks get 503 until this is fixed.
+  for (const p of config.problems) console.error(`config error: ${p}`);
   const store = new Store(config.stateFile);
   createApp({ config, store }).listen(config.port, () => {
     log("listening", {
       port: config.port,
+      accepting_webhooks: config.problems.length === 0,
       path: WEBHOOK_PATH,
       sms: config.sms.configured ? "configured" : config.sms.reason,
       email: config.email.configured ? "configured" : config.email.reason,

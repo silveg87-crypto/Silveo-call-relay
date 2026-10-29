@@ -213,3 +213,15 @@ test("short reasons stay in one SMS segment", () => {
   const sms = buildSms(extractCall(p), "sent");
   assert.ok(sms.length <= 160, `sms is ${sms.length} chars`);
 });
+
+test("unconfigured relay stays up but rejects webhooks with 503 and sends nothing", async () => {
+  const f = fakeFetch();
+  const config = { ...baseConfig(), problems: ["ELEVENLABS_WEBHOOK_SECRET is required"] };
+  await withServer({ config, store: freshStore(), fetchImpl: f }, async (base) => {
+    const health = await (await fetch(`${base}/healthz`)).json();
+    assert.equal(health.ok, false);
+    assert.deepEqual(health.problems, ["ELEVENLABS_WEBHOOK_SECRET is required"]);
+    assert.equal((await post(base, transcriptionPayload())).status, 503);
+  });
+  assert.equal(f.calls.length, 0);
+});
